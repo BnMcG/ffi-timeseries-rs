@@ -38,8 +38,7 @@ pub unsafe extern "C" fn query_timeseries(
     let batches = runtime.block_on(async move {
         let table = deltalake::open_table(timeseries_table_uri).await.unwrap();
 
-        // Set MAX batch size as we only want to return a single batch to make the FFI interface easier to deal with
-        let ctx = SessionContext::new_with_config(SessionConfig::new().with_batch_size(usize::MAX));
+        let ctx = SessionContext::new_with_config(SessionConfig::new().with_batch_size(4_000_000));
         ctx.register_table("timeseries", Arc::new(table)).unwrap();
         ctx.sql(query).await.unwrap().collect().await.unwrap()
     });

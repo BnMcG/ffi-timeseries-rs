@@ -55,9 +55,9 @@ async fn main() {
 }
 
 fn generate_sensor_ids() -> Vec<i32> {
-    let mut ids = [0i32; NUMBER_OF_SENSORS];
-    thread_rng().fill(&mut ids[..]);
-    ids.into()
+    (0..NUMBER_OF_SENSORS)
+        .map(|_| thread_rng().gen_range(0..1000))
+        .collect()
 }
 
 /// Generate a year's worth of data for the given sensor IDs. For each sensor, random values are
