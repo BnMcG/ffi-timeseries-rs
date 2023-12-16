@@ -1,2 +1,4 @@
 timeseries/
 target/
+obj/
+bin/

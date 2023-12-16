@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    ffi::{c_char, CStr},
+    sync::Arc,
+};
 
 use arrow::ffi::{to_ffi, FFI_ArrowArray, FFI_ArrowSchema};
 use deltalake::{
@@ -10,12 +13,34 @@ use deltalake::{
     datafusion::prelude::{SessionConfig, SessionContext},
 };
 
-pub fn query_timeseries(
-    query: &str,
-    timeseries_table_uri: &str,
-) -> (FFI_ArrowArray, FFI_ArrowSchema) {
-    // Tokio block_on because UniFFI doesn't generate async functions for C#
-    // (Although I'm not sure if it would implicitly convert a Rust async fn into a blocking C# method)
+#[repr(C)]
+pub struct FfiReturnValue {
+    array: FFI_ArrowArray,
+    schema: FFI_ArrowSchema,
+}
+
+/// # Safety
+/// The caller must ensure that the pointers for query_c, timeseries_table_uri_c are valid.
+#[no_mangle]
+pub unsafe extern "C" fn query_timeseries(
+    query_c: *const c_char,
+    timeseries_table_uri_c: *const c_char,
+) -> FfiReturnValue {
+    println!("Pointer query_c: {:?}", query_c);
+    println!(
+        "Pointer timeseries_table_uri_c: {:?}",
+        timeseries_table_uri_c
+    );
+
+    let query = unsafe { CStr::from_ptr(query_c).to_str().unwrap() };
+
+    println!("Got query: {}", query);
+
+    let timeseries_table_uri = unsafe { CStr::from_ptr(timeseries_table_uri_c).to_str().unwrap() };
+
+    println!("Got URI: {}", timeseries_table_uri);
+
+    // Tokio block_on because I've not looked into FFI-ing async functions...
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -33,7 +58,12 @@ pub fn query_timeseries(
     let batch = batches.into_iter().next().unwrap();
     let array = record_batch_to_struct_array(&batch).unwrap().into_data();
 
-    to_ffi(&array).unwrap()
+    let (ffi_array, ffi_schema) = to_ffi(&array).unwrap();
+
+    FfiReturnValue {
+        array: ffi_array,
+        schema: ffi_schema,
+    }
 }
 
 fn record_batch_to_struct_array(batch: &RecordBatch) -> Result<StructArray, ArrowError> {
@@ -48,14 +78,18 @@ fn record_batch_to_struct_array(batch: &RecordBatch) -> Result<StructArray, Arro
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::CString;
+
     use super::*;
 
     #[test]
     fn it_works() {
         // Should not panic if timeseries-populator-rs has run
-        query_timeseries(
-            "SELECT * FROM timeseries LIMIT 1",
-            "/home/ben/ffi-timeseries-rs/timeseries",
-        );
+        let query = CString::new("SELECT * FROM timeseries LIMIT 1").unwrap();
+        let uri = CString::new("/home/ben/ffi-timeseries-rs/timeseries").unwrap();
+
+        unsafe {
+            query_timeseries(query.as_ptr(), uri.as_ptr());
+        }
     }
 }
