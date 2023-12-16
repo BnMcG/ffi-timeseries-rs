@@ -26,19 +26,8 @@ pub unsafe extern "C" fn query_timeseries(
     query_c: *const c_char,
     timeseries_table_uri_c: *const c_char,
 ) -> FfiReturnValue {
-    println!("Pointer query_c: {:?}", query_c);
-    println!(
-        "Pointer timeseries_table_uri_c: {:?}",
-        timeseries_table_uri_c
-    );
-
     let query = unsafe { CStr::from_ptr(query_c).to_str().unwrap() };
-
-    println!("Got query: {}", query);
-
     let timeseries_table_uri = unsafe { CStr::from_ptr(timeseries_table_uri_c).to_str().unwrap() };
-
-    println!("Got URI: {}", timeseries_table_uri);
 
     // Tokio block_on because I've not looked into FFI-ing async functions...
     let runtime = tokio::runtime::Builder::new_current_thread()
