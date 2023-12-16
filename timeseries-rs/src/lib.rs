@@ -1,6 +1,7 @@
 use std::{
     ffi::{c_char, CStr},
     sync::Arc,
+    time::Instant,
 };
 
 use arrow::ffi::{to_ffi, FFI_ArrowArray, FFI_ArrowSchema};
@@ -29,6 +30,7 @@ pub unsafe extern "C" fn query_timeseries(
     let query = unsafe { CStr::from_ptr(query_c).to_str().unwrap() };
     let timeseries_table_uri = unsafe { CStr::from_ptr(timeseries_table_uri_c).to_str().unwrap() };
 
+    let started_at = Instant::now();
     // Tokio block_on because I've not looked into FFI-ing async functions...
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -47,6 +49,11 @@ pub unsafe extern "C" fn query_timeseries(
     let array = record_batch_to_struct_array(&batch).unwrap().into_data();
 
     let (ffi_array, ffi_schema) = to_ffi(&array).unwrap();
+    let execution_duration = started_at.elapsed();
+    println!(
+        "[rust] query executed in {}ms",
+        execution_duration.as_millis()
+    );
 
     FfiReturnValue {
         array: ffi_array,
