@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.31"
-deltalake = { version = "0.16.5", features = ["arrow", "parquet", "datafusion"] }
+deltalake = { version = "0.17", features = ["datafusion"] }
 rand = "0.8.5"
 tokio = "1.35.0"
